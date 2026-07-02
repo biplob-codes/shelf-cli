@@ -5,9 +5,11 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"github.com/biplob-codes/shelf-cli/cmd"
 	"github.com/biplob-codes/shelf-cli/internal/db"
+	"github.com/biplob-codes/shelf-cli/internal/store"
 	_ "modernc.org/sqlite"
 )
 
@@ -16,10 +18,15 @@ func main() {
 	if err !=nil{
 		log.Fatalf("Database connection : %v",err)
 	}
+	defer database.Close()
 	if err:=db.Migrate(database);err!=nil{
 		log.Fatalf("Database migration : %v",err)
 	}
-	
-	cmd.Execute()
-	defer database.Close()
+	repo:=store.NewLinkRepository(database)
+	cmd.RootCMD.AddCommand(cmd.CollectionCMD(repo))
+	if err:=cmd.RootCMD.Execute();err!=nil{
+		log.Fatal("Root CMD: ",err)
+		os.Exit(1)
+	}
+
 }
