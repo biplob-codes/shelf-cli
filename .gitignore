@@ -16,3 +16,4 @@ go.work
 
 # Env files
 .env
+*.db
