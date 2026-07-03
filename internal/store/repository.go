@@ -66,3 +66,31 @@ func (r *Repository) ReadCollections() ([]Collection, error) {
 
 	return collections, nil
 }
+
+func (r *Repository) UpdateCollection(oldTitle,newTitle string)error{
+ updateSql:=`UPDATE collection SET title=(?) WHERE title=(?);`
+ result,err:=r.db.Exec(updateSql,newTitle,oldTitle)
+ if err!=nil{
+	return fmt.Errorf("Update collection row: %w", err)
+ }
+ affectedRows,err:=result.RowsAffected()
+ if err!=nil{
+	return fmt.Errorf("Read affected rows: %w", err)
+ }
+ fmt.Printf("%d row updated successfully in collection.",affectedRows)
+ return nil
+}
+
+func (r *Repository) DeleteCollection(title string) error{
+	deleteSql:=`DELETE FROM collection WHERE title=(?);`
+	result,err:=r.db.Exec(deleteSql,title)
+	if err!=nil{
+		return fmt.Errorf("Delete collection row: %w", err)
+	}
+ affectedRows,err:=result.RowsAffected()
+ if err!=nil{
+	return fmt.Errorf("Read affected rows: %w", err)
+ }
+ 	fmt.Printf("%d row deleted successfully in collection.",affectedRows)
+ return nil
+}
