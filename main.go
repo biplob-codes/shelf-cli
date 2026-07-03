@@ -4,28 +4,34 @@ Copyright © 2026 biplob-codes
 package main
 
 import (
-	"log"
+	"os"
 
 	"github.com/biplob-codes/shelf-cli/cmd"
 	"github.com/biplob-codes/shelf-cli/internal/db"
 	"github.com/biplob-codes/shelf-cli/internal/store"
+	"github.com/biplob-codes/shelf-cli/internal/ui"
 	_ "modernc.org/sqlite"
 )
 
 func main() {
 	database, err := db.Connect("shelf.db")
 	if err != nil {
-		log.Fatalf("Database connection : %v", err)
+		ui.PrintError("Database connection: %v", err)
+		os.Exit(1)
 	}
 	defer database.Close()
+
 	if err := db.Migrate(database); err != nil {
-		log.Fatalf("Database migration : %v", err)
+		ui.PrintError("Database migration: %v", err)
+		os.Exit(1)
 	}
+
 	repo := store.NewLinkRepository(database)
 	cmd.RootCMD.AddCommand(cmd.CollectionCMD(repo))
 	cmd.RootCMD.AddCommand(cmd.LinkCMD(repo))
-	if err := cmd.RootCMD.Execute(); err != nil {
-		log.Fatal("Root CMD: ", err)
-	}
 
+	if err := cmd.RootCMD.Execute(); err != nil {
+		ui.PrintErrorMsg(err.Error())
+		os.Exit(1)
+	}
 }

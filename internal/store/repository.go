@@ -2,21 +2,12 @@ package store
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 )
 
 type Repository struct {
 	db *sql.DB
-}
-type Collection struct {
-	ID            int
-	Title         string
-	NumberOfLinks int
-}
-type Link struct {
-	ID  int
-	URL string
-	Tag string
 }
 
 func NewLinkRepository(db *sql.DB) *Repository {
@@ -39,13 +30,28 @@ func (r *Repository) CreateCollection(title string) error {
 }
 
 func (r *Repository) AddLink(url, tag, collection string) error {
+	var collectionID sql.NullInt64
+
+	if collection != "" {
+		var id int64
+		err := r.db.QueryRow(`SELECT id FROM collection WHERE title = ?`, collection).Scan(&id)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return fmt.Errorf("collection %q does not exist", collection)
+			}
+			return fmt.Errorf("looking up collection %q: %w", collection, err)
+		}
+		collectionID = sql.NullInt64{Int64: id, Valid: true}
+	}
+
 	insertLink := `
-	INSERT INTO link(url,tag,collection_id) 
-	VALUES(?,?,(SELECT id FROM collection WHERE title=(?)));`
-	result, err := r.db.Exec(insertLink, url, tag, collection)
+	INSERT INTO link (url, tag, collection_id)
+	VALUES (?, ?, ?);`
+	result, err := r.db.Exec(insertLink, url, tag, collectionID)
 	if err != nil {
 		return fmt.Errorf("add link: %w", err)
 	}
+
 	newId, err := result.LastInsertId()
 	if err != nil {
 		return fmt.Errorf("last insert id for link: %w", err)
@@ -57,7 +63,7 @@ func (r *Repository) AddLink(url, tag, collection string) error {
 
 func (r *Repository) ReadCollections() ([]Collection, error) {
 	getCollections := `
-	SELECT c.id, c.title, COUNT(l.id) as NumberOfLinks
+	SELECT c.id, c.title, COUNT(l.id) as NumberOfLinks,c.created_at
 	FROM collection c
 	LEFT JOIN link l ON l.collection_id = c.id
 	GROUP BY c.id, c.title
@@ -72,14 +78,12 @@ func (r *Repository) ReadCollections() ([]Collection, error) {
 
 	var collections []Collection
 	for rows.Next() {
-		var id int
-		var title string
-		var numberOfLinks int
-		err := rows.Scan(&id, &title, &numberOfLinks)
+		var c Collection
+		err := rows.Scan(&c.ID, &c.Title, &c.LinkCount, &c.CreatedAt)
 		if err != nil {
 			return nil, fmt.Errorf("read row of collection: %w", err)
 		}
-		collections = append(collections, Collection{ID: id, Title: title, NumberOfLinks: numberOfLinks})
+		collections = append(collections, c)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("read rows of collection: %w", err)
@@ -90,10 +94,10 @@ func (r *Repository) ReadCollections() ([]Collection, error) {
 func (r *Repository) GetLinks(collection string) ([]Link, error) {
 	var getLinks string
 	if collection == "" {
-		getLinks = `SELECT id,url,tag FROM link WHERE collection_id IS NULL ORDER BY id`
+		getLinks = `SELECT id,url,tag,created_at FROM link WHERE collection_id IS NULL ORDER BY id`
 	} else {
 		getLinks = `
-	SELECT id,url,tag FROM link
+	SELECT id,url,tag,created_at FROM link
 	WHERE collection_id=(SELECT id FROM collection WHERE title=(?))
 	ORDER BY id
 	`
@@ -107,14 +111,12 @@ func (r *Repository) GetLinks(collection string) ([]Link, error) {
 
 	var links []Link
 	for rows.Next() {
-		var id int
-		var url string
-		var tag string
-		err := rows.Scan(&id, &url, &tag)
+		var l Link
+		err := rows.Scan(&l.ID, &l.URL, &l.Tag, &l.CreatedAt)
 		if err != nil {
 			return nil, fmt.Errorf("read row of link: %w", err)
 		}
-		links = append(links, Link{ID: id, URL: url, Tag: tag})
+		links = append(links, l)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("read rows of link: %w", err)

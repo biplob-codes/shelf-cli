@@ -5,24 +5,14 @@ package cmd
 
 import (
 	"fmt"
-	"log"
-	"os"
 	"strconv"
-	"text/tabwriter"
 
 	"github.com/biplob-codes/shelf-cli/internal/store"
+	"github.com/biplob-codes/shelf-cli/internal/ui"
 	"github.com/spf13/cobra"
 )
 
-func getNumber(s string) int {
-	n, err := strconv.Atoi(s)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return n
-}
-
-var longLinkMessage = `Save and organize your links — with tags and collections.
+var longLinkMessage = `Save and organize your links — with a tag and a collection.
 
 Examples:
   shelf link add https://example.com -t news -c reading-list
@@ -30,9 +20,7 @@ Examples:
   shelf link update 3 tech-articles
   shelf link delete 3
 
-You can also use the shorter aliases:
-  shelf lnk list
-  shelf l list`
+Aliases: shelf lnk, shelf l`
 
 func LinkCMD(repo *store.Repository) *cobra.Command {
 	linkCmd := &cobra.Command{
@@ -40,61 +28,64 @@ func LinkCMD(repo *store.Repository) *cobra.Command {
 		Aliases: []string{"lnk", "l"},
 		Short:   "Manage your saved links",
 		Long:    longLinkMessage,
-		Run: func(cmd *cobra.Command, args []string) {
-			cmd.Help()
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return cmd.Help()
 		},
 	}
 
 	addCmd := &cobra.Command{
 		Use:   "add [url]",
-		Short: "Add a new link",
+		Short: "Save a new link",
 		Long: `Save a new link, optionally tagging it and assigning it to a collection.
 
 Example:
   shelf link add https://example.com -t news -c reading-list`,
 		Args: cobra.ExactArgs(1),
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
+			url := args[0]
 			collection, err := cmd.Flags().GetString("collection")
 			if err != nil {
-				log.Fatalf("Error while getting flags: %v", err)
+				return fmt.Errorf("reading --collection flag: %w", err)
 			}
 			tag, err := cmd.Flags().GetString("tag")
 			if err != nil {
-				log.Fatalf("Error while getting flags: %v", err)
+				return fmt.Errorf("reading --tag flag: %w", err)
 			}
-			if err := repo.AddLink(args[0], tag, collection); err != nil {
-				log.Fatalf("Add Link Command: %v", err)
+			if err := repo.AddLink(url, tag, collection); err != nil {
+				return fmt.Errorf("adding link %q: %w", url, err)
 			}
+			ui.PrintSuccess("Saved %s", url)
+			return nil
 		},
 	}
-	addCmd.Flags().StringP("collection", "c", "", "Add links to your collection")
-	addCmd.Flags().StringP("tag", "t", "no-tag", "Add tag to your links")
+	addCmd.Flags().StringP("collection", "c", "", "Assign the link to a collection")
+	addCmd.Flags().StringP("tag", "t", "no-tag", "Tag the link for easier filtering")
 
 	listCmd := &cobra.Command{
 		Use:   "list",
-		Short: "List links in a collection",
+		Short: "List saved links",
 		Long: `List all saved links, optionally filtered by collection.
 
 Example:
   shelf link list -c reading-list`,
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			collection, err := cmd.Flags().GetString("collection")
 			if err != nil {
-				log.Fatalf("Error while getting flags: %v", err)
+				return fmt.Errorf("reading --collection flag: %w", err)
 			}
 			links, err := repo.GetLinks(collection)
 			if err != nil {
-				log.Fatalf("List Link Command: %v", err)
+				return fmt.Errorf("listing links: %w", err)
 			}
-			w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-			fmt.Fprintln(w, "ID\tURL\tTAGS")
-			for _, link := range links {
-				fmt.Fprintf(w, "%d\t%s\t%s\n", link.ID, link.URL, link.Tag)
+			if len(links) == 0 {
+				ui.PrintInfo("No links yet. Add one with 'shelf link add <url>'.")
+				return nil
 			}
-			w.Flush()
+			fmt.Println(ui.RenderLinksTable(links))
+			return nil
 		},
 	}
-	listCmd.Flags().StringP("collection", "c", "", "Add links to your collection")
+	listCmd.Flags().StringP("collection", "c", "", "Filter links by collection")
 
 	updateCmd := &cobra.Command{
 		Use:   "update [id] [tag]",
@@ -104,34 +95,49 @@ Example:
 Example:
   shelf link update 3 tech-articles`,
 		Args: cobra.ExactArgs(2),
-		Run: func(cmd *cobra.Command, args []string) {
-			id := args[0]
-			tag := args[1]
-			if err := repo.UpdateLink(getNumber(id), tag); err != nil {
-				log.Fatalf("Update link command: %v", err)
+		RunE: func(cmd *cobra.Command, args []string) error {
+			id, err := parseID(args[0])
+			if err != nil {
+				return err
 			}
+			tag := args[1]
+			if err := repo.UpdateLink(id, tag); err != nil {
+				return fmt.Errorf("updating link %d: %w", id, err)
+			}
+			ui.PrintSuccess("Updated link %d with tag %q", id, tag)
+			return nil
 		},
 	}
 
 	deleteCmd := &cobra.Command{
 		Use:   "delete [id]",
-		Short: "Delete a link",
+		Short: "Delete a saved link",
 		Long: `Permanently delete a saved link by its ID.
 
 Example:
   shelf link delete 3`,
 		Args: cobra.ExactArgs(1),
-		Run: func(cmd *cobra.Command, args []string) {
-			id := getNumber(args[0])
-			if err := repo.DeleteLink(id); err != nil {
-				log.Fatalf("Delete link command: %v", err)
+		RunE: func(cmd *cobra.Command, args []string) error {
+			id, err := parseID(args[0])
+			if err != nil {
+				return err
 			}
+			if err := repo.DeleteLink(id); err != nil {
+				return fmt.Errorf("deleting link %d: %w", id, err)
+			}
+			ui.PrintSuccess("Deleted link %d", id)
+			return nil
 		},
 	}
 
-	linkCmd.AddCommand(addCmd)
-	linkCmd.AddCommand(listCmd)
-	linkCmd.AddCommand(updateCmd)
-	linkCmd.AddCommand(deleteCmd)
+	linkCmd.AddCommand(addCmd, listCmd, updateCmd, deleteCmd)
 	return linkCmd
+}
+
+func parseID(s string) (int, error) {
+	n, err := strconv.Atoi(s)
+	if err != nil {
+		return 0, fmt.Errorf("invalid id %q: must be a number", s)
+	}
+	return n, nil
 }
