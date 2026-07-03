@@ -22,7 +22,5 @@ func Connect(name string) (*sql.DB, error) {
 		return nil, fmt.Errorf("pinging database: %w", pingErr)
 	}
 
-	fmt.Println("Database connection established successfully.")
-
 	return db, nil
 }

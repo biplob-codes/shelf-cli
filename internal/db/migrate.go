@@ -27,6 +27,6 @@ func Migrate(db *sql.DB) error {
 	if err != nil {
 		return fmt.Errorf("Opening database : %w", err)
 	}
-	fmt.Println("Database migrated successfully")
+ 
 	return nil
 }
