@@ -38,11 +38,11 @@ func (r *Repository) CreateCollection(title string) error {
 	return nil
 }
 
-func (r *Repository) AddLink(url, tags, collection string) error {
+func (r *Repository) AddLink(url, tag, collection string) error {
 	insertLink := `
-	INSERT INTO link(url,tags,collection_id) 
+	INSERT INTO link(url,tag,collection_id) 
 	VALUES(?,?,(SELECT id FROM collection WHERE title=(?)));`
-	result, err := r.db.Exec(insertLink, url, tags, collection)
+	result, err := r.db.Exec(insertLink, url, tag, collection)
 	if err != nil {
 		return fmt.Errorf("add link: %w", err)
 	}
@@ -50,7 +50,7 @@ func (r *Repository) AddLink(url, tags, collection string) error {
 	if err != nil {
 		return fmt.Errorf("last insert id for link: %w", err)
 	}
-	fmt.Printf("New link added to %s. Link ID: %d", collection, newId)
+	fmt.Println("Created link id:", newId)
 
 	return nil
 }
@@ -88,11 +88,17 @@ func (r *Repository) ReadCollections() ([]Collection, error) {
 	return collections, nil
 }
 func (r *Repository) GetLinks(collection string) ([]Link, error) {
-	getLinks := `
-	SELECT id,url,tags FROM link
+	var getLinks string
+	if collection == "" {
+		getLinks = `SELECT id,url,tag FROM link WHERE collection_id IS NULL ORDER BY id`
+	} else {
+		getLinks = `
+	SELECT id,url,tag FROM link
 	WHERE collection_id=(SELECT id FROM collection WHERE title=(?))
 	ORDER BY id
 	`
+	}
+
 	rows, err := r.db.Query(getLinks, collection)
 	if err != nil {
 		return nil, fmt.Errorf("read links: %w", err)
@@ -131,7 +137,7 @@ func (r *Repository) UpdateCollection(oldTitle, newTitle string) error {
 	return nil
 }
 func (r *Repository) UpdateLink(id int, tag string) error {
-	updateSql := `UPDATE link SET tags=(?) WHERE id=(?);`
+	updateSql := `UPDATE link SET tag=(?) WHERE id=(?);`
 	result, err := r.db.Exec(updateSql, tag, id)
 	if err != nil {
 		return fmt.Errorf("Update link row: %w", err)

@@ -58,17 +58,17 @@ Example:
 			if err != nil {
 				log.Fatalf("Error while getting flags: %v", err)
 			}
-			tags, err := cmd.Flags().GetString("tags")
+			tag, err := cmd.Flags().GetString("tag")
 			if err != nil {
 				log.Fatalf("Error while getting flags: %v", err)
 			}
-			if err := repo.AddLink(args[0], tags, collection); err != nil {
+			if err := repo.AddLink(args[0], tag, collection); err != nil {
 				log.Fatalf("Add Link Command: %v", err)
 			}
 		},
 	}
-	addCmd.Flags().StringP("collection", "c", "my-links", "Add links to your collection")
-	addCmd.Flags().StringP("tags", "t", "no-tag", "Add tags to your links")
+	addCmd.Flags().StringP("collection", "c", "", "Add links to your collection")
+	addCmd.Flags().StringP("tag", "t", "no-tag", "Add tag to your links")
 
 	listCmd := &cobra.Command{
 		Use:   "list",
@@ -94,7 +94,7 @@ Example:
 			w.Flush()
 		},
 	}
-	listCmd.Flags().StringP("collection", "c", "my-links", "Add links to your collection")
+	listCmd.Flags().StringP("collection", "c", "", "Add links to your collection")
 
 	updateCmd := &cobra.Command{
 		Use:   "update [id] [tag]",

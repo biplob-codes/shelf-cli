@@ -15,12 +15,12 @@ func Migrate(db *sql.DB) error {
 	CREATE TABLE IF NOT EXISTS link(
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		url TEXT NOT NULL,
-		tags TEXT,
-		collection_id INTEGER NOT NULL,
+		tag TEXT,
+		collection_id INTEGER,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		FOREIGN KEY (collection_id) REFERENCES collection(id) ON DELETE CASCADE
 		);
-	CREATE INDEX IF NOT EXISTS idx_link_collection_id ON link(collection_id);
+	
 		`
 
 	_, err := db.Exec(createLinkTable)
