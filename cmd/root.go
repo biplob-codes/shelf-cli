@@ -1,5 +1,5 @@
 /*
-Copyright © 2026 biplob-codes 
+Copyright © 2026 biplob-codes
 */
 package cmd
 
@@ -18,6 +18,5 @@ and quickly open or search through them without leaving your terminal.
 Examples:
   shelf add https://example.com --collection work --tags golang,cli
   shelf list --collection work
-  shelf open <link-id>`,
+  `,
 }
-

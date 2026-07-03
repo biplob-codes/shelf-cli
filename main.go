@@ -5,7 +5,6 @@ package main
 
 import (
 	"log"
-	"os"
 
 	"github.com/biplob-codes/shelf-cli/cmd"
 	"github.com/biplob-codes/shelf-cli/internal/db"
@@ -14,20 +13,19 @@ import (
 )
 
 func main() {
-	database,err:=db.Connect("shelf.db")
-	if err !=nil{
-		log.Fatalf("Database connection : %v",err)
+	database, err := db.Connect("shelf.db")
+	if err != nil {
+		log.Fatalf("Database connection : %v", err)
 	}
 	defer database.Close()
-	if err:=db.Migrate(database);err!=nil{
-		log.Fatalf("Database migration : %v",err)
+	if err := db.Migrate(database); err != nil {
+		log.Fatalf("Database migration : %v", err)
 	}
-	repo:=store.NewLinkRepository(database)
+	repo := store.NewLinkRepository(database)
 	cmd.RootCMD.AddCommand(cmd.CollectionCMD(repo))
 	cmd.RootCMD.AddCommand(cmd.LinkCMD(repo))
-	if err:=cmd.RootCMD.Execute();err!=nil{
-		log.Fatal("Root CMD: ",err)
-		os.Exit(1)
+	if err := cmd.RootCMD.Execute(); err != nil {
+		log.Fatal("Root CMD: ", err)
 	}
 
 }
