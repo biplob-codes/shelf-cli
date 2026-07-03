@@ -24,6 +24,7 @@ func main() {
 	}
 	repo:=store.NewLinkRepository(database)
 	cmd.RootCMD.AddCommand(cmd.CollectionCMD(repo))
+	cmd.RootCMD.AddCommand(cmd.LinkCMD(repo))
 	if err:=cmd.RootCMD.Execute();err!=nil{
 		log.Fatal("Root CMD: ",err)
 		os.Exit(1)

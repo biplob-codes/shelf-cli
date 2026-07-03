@@ -8,7 +8,17 @@ import (
 type Repository struct {
 	db *sql.DB
 }
-
+type Collection struct {
+	ID            int
+	Title         string
+	NumberOfLinks int
+}
+type Link struct {
+	ID            int
+	URL         string
+	Tag         string
+	 
+}
 func NewLinkRepository(db *sql.DB) *Repository {
 	return &Repository{db: db}
 }
@@ -28,11 +38,23 @@ func (r *Repository) CreateCollection(title string) error {
 	return nil
 }
 
-type Collection struct {
-	ID            int
-	Title         string
-	NumberOfLinks int
+func (r *Repository) AddLink(url,tags,collection string) error {
+	insertLink := `
+	INSERT INTO link(url,tags,collection_id) 
+	VALUES(?,?,(SELECT id FROM collection WHERE title=(?)));`
+	result, err := r.db.Exec(insertLink, url,tags,collection)
+	if err != nil {
+		return fmt.Errorf("add link: %w", err)
+	}
+	newId, err := result.LastInsertId()
+	if err != nil {
+		return fmt.Errorf("last insert id for link: %w", err)
+	}
+	fmt.Printf("New link added to %s. Link ID: %d",collection, newId)
+
+	return nil
 }
+
 
 func (r *Repository) ReadCollections() ([]Collection, error) {
 	getCollections := `
@@ -66,6 +88,35 @@ func (r *Repository) ReadCollections() ([]Collection, error) {
 
 	return collections, nil
 }
+func (r *Repository) GetLinks(collection string) ([]Link, error) {
+	getLinks := `
+	SELECT id,url,tags FROM link
+	WHERE collection_id=(SELECT id FROM collection WHERE title=(?))
+	ORDER BY id
+	`
+	rows, err := r.db.Query(getLinks,collection)
+	if err != nil {
+		return nil, fmt.Errorf("read links: %w", err)
+	}
+	defer rows.Close()
+
+	var links []Link
+	for rows.Next() {
+		var id int
+		var url string
+		var tag string
+		err := rows.Scan(&id, &url, &tag)
+		if err != nil {
+			return nil, fmt.Errorf("read row of link: %w", err)
+		}
+		links = append(links, Link{ID: id, URL: url, Tag: tag})
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("read rows of link: %w", err)
+	}
+
+	return links, nil
+}
 
 func (r *Repository) UpdateCollection(oldTitle,newTitle string)error{
  updateSql:=`UPDATE collection SET title=(?) WHERE title=(?);`
@@ -80,7 +131,19 @@ func (r *Repository) UpdateCollection(oldTitle,newTitle string)error{
  fmt.Printf("%d row updated successfully in collection.",affectedRows)
  return nil
 }
-
+func (r *Repository) UpdateLink(id int,tag string)error{
+ updateSql:=`UPDATE link SET tags=(?) WHERE id=(?);`
+ result,err:=r.db.Exec(updateSql,tag,id)
+ if err!=nil{
+	return fmt.Errorf("Update link row: %w", err)
+ }
+ affectedRows,err:=result.RowsAffected()
+ if err!=nil{
+	return fmt.Errorf("Read affected rows: %w", err)
+ }
+ fmt.Printf("%d row updated successfully in link.",affectedRows)
+ return nil
+}
 func (r *Repository) DeleteCollection(title string) error{
 	deleteSql:=`DELETE FROM collection WHERE title=(?);`
 	result,err:=r.db.Exec(deleteSql,title)
@@ -92,5 +155,18 @@ func (r *Repository) DeleteCollection(title string) error{
 	return fmt.Errorf("Read affected rows: %w", err)
  }
  	fmt.Printf("%d row deleted successfully in collection.",affectedRows)
+ return nil
+}
+func (r *Repository) DeleteLink(id int) error{
+	deleteSql:=`DELETE FROM link WHERE id=(?);`
+	result,err:=r.db.Exec(deleteSql,id)
+	if err!=nil{
+		return fmt.Errorf("Delete link row: %w", err)
+	}
+ affectedRows,err:=result.RowsAffected()
+ if err!=nil{
+	return fmt.Errorf("Read affected rows: %w", err)
+ }
+ 	fmt.Printf("%d row deleted successfully in link.",affectedRows)
  return nil
 }
