@@ -26,9 +26,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	repo := store.NewLinkRepository(database)
-	cmd.RootCMD.AddCommand(cmd.CollectionCMD(repo))
-	cmd.RootCMD.AddCommand(cmd.LinkCMD(repo))
+	collectionRepo := store.NewCollectionRepository(database)
+	linkRepo := store.NewLinkRepository(database, collectionRepo)
+
+	cmd.RootCMD.AddCommand(cmd.CollectionCMD(collectionRepo))
+	cmd.RootCMD.AddCommand(cmd.LinkCMD(linkRepo))
 
 	if err := cmd.RootCMD.Execute(); err != nil {
 		ui.PrintErrorMsg(err.Error())

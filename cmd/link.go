@@ -22,7 +22,7 @@ Examples:
 
 Aliases: shelf lnk, shelf l`
 
-func LinkCMD(repo *store.Repository) *cobra.Command {
+func LinkCMD(repo *store.LinkRepository) *cobra.Command {
 	linkCmd := &cobra.Command{
 		Use:     "link",
 		Aliases: []string{"lnk", "l"},
@@ -51,7 +51,7 @@ Example:
 			if err != nil {
 				return fmt.Errorf("reading --tag flag: %w", err)
 			}
-			if err := repo.AddLink(url, tag, collection); err != nil {
+			if err := repo.Add(url, tag, collection); err != nil {
 				return fmt.Errorf("adding link %q: %w", url, err)
 			}
 			ui.PrintSuccess("Saved %s", url)
@@ -73,7 +73,7 @@ Example:
 			if err != nil {
 				return fmt.Errorf("reading --collection flag: %w", err)
 			}
-			links, err := repo.GetLinks(collection)
+			links, err := repo.GetAll(collection)
 			if err != nil {
 				return fmt.Errorf("listing links: %w", err)
 			}
@@ -101,7 +101,7 @@ Example:
 				return err
 			}
 			tag := args[1]
-			if err := repo.UpdateLink(id, tag); err != nil {
+			if err := repo.Update(id, tag); err != nil {
 				return fmt.Errorf("updating link %d: %w", id, err)
 			}
 			ui.PrintSuccess("Updated link %d with tag %q", id, tag)
@@ -122,7 +122,7 @@ Example:
 			if err != nil {
 				return err
 			}
-			if err := repo.DeleteLink(id); err != nil {
+			if err := repo.Delete(id); err != nil {
 				return fmt.Errorf("deleting link %d: %w", id, err)
 			}
 			ui.PrintSuccess("Deleted link %d", id)

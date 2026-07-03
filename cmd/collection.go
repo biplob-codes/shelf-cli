@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func CollectionCMD(repo *store.Repository) *cobra.Command {
+func CollectionCMD(repo *store.CollectionRepository) *cobra.Command {
 	collectionCmd := &cobra.Command{
 		Use:     "collection",
 		Aliases: []string{"c"},
@@ -27,7 +27,7 @@ func CollectionCMD(repo *store.Repository) *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
-			if err := repo.CreateCollection(name); err != nil {
+			if err := repo.Create(name); err != nil {
 				return fmt.Errorf("creating collection %q: %w", name, err)
 			}
 			ui.PrintSuccess("Created collection %q", name)
@@ -40,7 +40,7 @@ func CollectionCMD(repo *store.Repository) *cobra.Command {
 		Short: "List all collections",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			collections, err := repo.ReadCollections()
+			collections, err := repo.ReadAll()
 			if err != nil {
 				return fmt.Errorf("listing collections: %w", err)
 			}
@@ -59,7 +59,7 @@ func CollectionCMD(repo *store.Repository) *cobra.Command {
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			oldName, newName := args[0], args[1]
-			if err := repo.UpdateCollection(oldName, newName); err != nil {
+			if err := repo.Update(oldName, newName); err != nil {
 				return fmt.Errorf("renaming collection %q to %q: %w", oldName, newName, err)
 			}
 			ui.PrintSuccess("Renamed collection %q to %q", oldName, newName)
@@ -73,7 +73,7 @@ func CollectionCMD(repo *store.Repository) *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
-			if err := repo.DeleteCollection(name); err != nil {
+			if err := repo.Delete(name); err != nil {
 				return fmt.Errorf("deleting collection %q: %w", name, err)
 			}
 			ui.PrintSuccess("Deleted collection %q", name)
