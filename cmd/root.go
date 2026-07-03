@@ -6,7 +6,7 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 )
-
+var version ="dev"
 var RootCMD = &cobra.Command{
 	Use:   "shelf",
 	Short: "Organize and manage your links from the terminal",
@@ -30,4 +30,5 @@ Examples:
   shelf collection list`,
 	SilenceUsage:  true,
 	SilenceErrors: true,
+  Version: version,
 }
